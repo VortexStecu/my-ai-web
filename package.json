@@ -1,7 +1,6 @@
 {
   "name": "my-ai-web",
   "version": "1.0.0",
-  "description": "AI bot or web app running on Railway",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
