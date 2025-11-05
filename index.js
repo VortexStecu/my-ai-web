@@ -12,34 +12,39 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// serve HTML dari folder public
-app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => {
+// ✅ Tambahan untuk log folder biar tahu Railway bisa nemuin file-nya
+console.log("Serving static files from:", path.join(__dirname, "public"));
+
+// ✅ Serve folder public
+app.use("/", express.static(path.join(__dirname, "public")));
+
+// ✅ Tambahkan fallback (kalau / gak nemu)
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// API Chat
+// ✅ Endpoint API Chat (optional, aman biar gak ganggu tampilan)
 app.post("/api/chat", async (req, res) => {
+  const { message } = req.body;
   try {
-    const userMsg = req.body.message;
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: userMsg }],
+        messages: [{ role: "user", content: message }],
       }),
     });
 
     const data = await response.json();
-    res.json({ reply: data.choices?.[0]?.message?.content || "No reply" });
+    res.json({ reply: data.choices?.[0]?.message?.content || "Error: No reply" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
