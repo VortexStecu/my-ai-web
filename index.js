@@ -1,57 +1,42 @@
 import express from "express";
 import fetch from "node-fetch";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 8080;
+app.use(express.json());
 
-// Cek koneksi
-app.get("/", (req, res) => {
-  res.send(`
-    <html>
-      <head><title>My AI Web</title></head>
-      <body style="font-family: Arial; background:#101010; color:white; text-align:center; margin-top:100px;">
-        <h2>🤖 My AI Web is Online!</h2>
-        <form action="/ask" method="get">
-          <input name="q" placeholder="Tanya sesuatu..." style="width:300px; padding:8px;">
-          <button type="submit" style="padding:8px;">Kirim</button>
-        </form>
-      </body>
-    </html>
-  `);
-});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Endpoint tanya ke OpenAI
-app.get("/ask", async (req, res) => {
-  const question = req.query.q;
-  if (!question) return res.send("⚠️ Pertanyaan tidak boleh kosong.");
+// Serve file HTML dari folder public
+app.use(express.static(path.join(__dirname, "public")));
 
-  const answer = await askOpenAI(question);
-  res.send(`
-    <h3>Pertanyaan:</h3> ${question}
-    <h3>Jawaban AI:</h3> ${answer}
-    <br><a href="/">Kembali</a>
-  `);
-});
-
-// Fungsi panggil OpenAI API
-async function askOpenAI(prompt) {
+// API Chat endpoint
+app.post("/api/chat", async (req, res) => {
+  const userMsg = req.body.message;
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }]
-      })
+        messages: [{ role: "user", content: userMsg }],
+      }),
     });
-    const data = await r.json();
-    return data.choices?.[0]?.message?.content || "❌ Tidak ada jawaban dari AI.";
-  } catch (e) {
-    return "⚠️ Gagal menghubungi API OpenAI.";
-  }
-}
 
-app.listen(port, () => console.log(`✅ Server running on port ${port}`));
+    const data = await response.json();
+    res.json({ reply: data.choices?.[0]?.message?.content || "Error: No reply" });
+  } catch (err) {
+    res.json({ reply: "Server error: " + err.message });
+  }
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port, () => console.log(`Server running on port ${port}`));
