@@ -12,24 +12,21 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve file HTML dari folder public
+// serve HTML dari folder public
 app.use(express.static(path.join(__dirname, "public")));
-
-// Route utama ("/") kirim index.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// API Chat endpoint
+// API Chat
 app.post("/api/chat", async (req, res) => {
-  const userMsg = req.body.message;
-
   try {
+    const userMsg = req.body.message;
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
@@ -38,13 +35,11 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const data = await response.json();
-    res.json({
-      reply: data.choices?.[0]?.message?.content || "Error: No reply",
-    });
+    res.json({ reply: data.choices?.[0]?.message?.content || "No reply" });
   } catch (err) {
-    res.json({ reply: "Server error: " + err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
 const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`✅ Server running on port ${port}`));
+app.listen(port, () => console.log(`Server running on port ${port}`));
