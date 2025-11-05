@@ -1,60 +1,57 @@
 import express from "express";
-import bodyParser from "body-parser";
 import fetch from "node-fetch";
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-app.use(bodyParser.json());
-
-// ✅ route utama biar gak "Not Found"
+// Cek koneksi
 app.get("/", (req, res) => {
   res.send(`
     <html>
-      <head>
-        <title>My AI Web</title>
-      </head>
-      <body style="font-family: sans-serif; background: #0f0f0f; color: #fff; text-align: center;">
+      <head><title>My AI Web</title></head>
+      <body style="font-family: Arial; background:#101010; color:white; text-align:center; margin-top:100px;">
         <h2>🤖 My AI Web is Online!</h2>
         <form action="/ask" method="get">
-          <input name="question" placeholder="Tanya sesuatu..." style="width: 300px; padding: 8px;">
-          <button type="submit" style="padding: 8px;">Kirim</button>
+          <input name="q" placeholder="Tanya sesuatu..." style="width:300px; padding:8px;">
+          <button type="submit" style="padding:8px;">Kirim</button>
         </form>
       </body>
     </html>
   `);
 });
 
-// ✅ route AI-nya
+// Endpoint tanya ke OpenAI
 app.get("/ask", async (req, res) => {
-  const question = req.query.question;
-  if (!question) return res.send("⚠️ Pertanyaan tidak boleh kosong!");
+  const question = req.query.q;
+  if (!question) return res.send("⚠️ Pertanyaan tidak boleh kosong.");
 
-  const reply = await askOpenAI(question);
-  res.send(`<h3>Pertanyaan:</h3> ${question}<br><h3>Jawaban:</h3> ${reply}`);
+  const answer = await askOpenAI(question);
+  res.send(`
+    <h3>Pertanyaan:</h3> ${question}
+    <h3>Jawaban AI:</h3> ${answer}
+    <br><a href="/">Kembali</a>
+  `);
 });
 
+// Fungsi panggil OpenAI API
 async function askOpenAI(prompt) {
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        "Authorization": "Bearer " + process.env.OPENAI_API_KEY,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }]
       })
     });
-
-    const data = await response.json();
+    const data = await r.json();
     return data.choices?.[0]?.message?.content || "❌ Tidak ada jawaban dari AI.";
-  } catch (err) {
-    return "⚠️ Gagal terhubung ke OpenAI API.";
+  } catch (e) {
+    return "⚠️ Gagal menghubungi API OpenAI.";
   }
 }
 
-app.listen(port, () => {
-  console.log(`✅ Server running on port ${port}`);
-});
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
